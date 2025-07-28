@@ -1,0 +1,33 @@
+services:
+  doc2md:
+    image: felipefontoura/doc2md:latest
+    networks:
+      - network_public
+    environment:
+      - OPENAI_API_KEY=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
+      - LLM_MODEL=gpt-4o-mini
+      - WORKERS=4 # (2 x num_cores) + 1
+      - TIMEOUT=0
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 760M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.doc2md.rule=Host(`api.doc2md.website.com`)
+        - traefik.http.routers.doc2md.entrypoints=websecure
+        - traefik.http.routers.doc2md.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.doc2md.priority=1
+        - traefik.http.routers.doc2md.service=doc2md
+        - traefik.http.services.doc2md.loadbalancer.server.port=7001
+        - traefik.http.services.doc2md.loadbalancer.passHostHeader=true
+networks:
+  network_public:
+    name: network_public
+    external: true
