@@ -1,4 +1,3 @@
-
 import io
 import pandas as pd
 import pdfplumber
@@ -27,6 +26,8 @@ def extract_pdf():
     try:
         # A requisição do n8n deve enviar o PDF como binary data no corpo da requisição
         pdf_bytes = request.get_data()
+        app.logger.info(f"Received request with Content-Type: {request.content_type}")
+        app.logger.info(f"Received PDF data length: {len(pdf_bytes)} bytes")
         
         if not pdf_bytes:
             return jsonify({"error": "No PDF data provided"}), 400
@@ -59,5 +60,3 @@ def convert_tables_to_csv():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7001)
-
-
