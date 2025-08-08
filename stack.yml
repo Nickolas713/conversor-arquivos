@@ -6,7 +6,7 @@ services:
       - network_public
     environment:
       # - OPENAI_API_KEY=sua_chave_aqui # REMOVA ESTA LINHA E CONFIGURE NO COOLIFY COMO SECRETO
-      - LLM_MODEL=gpt-4o-mini
+      - LLM_MODEL=gpt-4.1-mini
       - WORKERS=4
       - TIMEOUT=120
 
