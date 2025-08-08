@@ -13,12 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 
 # Expõe a porta que a aplicação Flask vai usar
-EXPOSE 5000
+EXPOSE 7001
 
 # Define a variável de ambiente para o Flask
 ENV FLASK_APP=app.py
 
 # Comando para rodar a aplicação
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["flask", "run", "--host=0.0.0.0", "--port=7001"]
 
 
