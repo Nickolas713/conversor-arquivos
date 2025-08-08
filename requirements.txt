@@ -1,6 +1,24 @@
 gunicorn==23.0.0
 Flask==3.1.0
-markitdown==0.0.1a3
-py-zerox==0.0.7
 python-dotenv==1.0.1
 
+# Parsing e extração
+pdfplumber==0.11.0
+camelot-py[cv]==0.11.0
+opencv-python-headless==4.10.0.84
+pdf2image==1.17.0
+pytesseract==0.3.13
+Pillow==10.3.0
+beautifulsoup4==4.12.3
+lxml==5.2.2
+
+# Office
+python-docx==1.1.2
+python-pptx==0.6.23
+
+# Data
+pandas==2.2.2
+openpyxl==3.1.5
+
+# Áudio offline (opcional)
+vosk==0.3.45
