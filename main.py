@@ -378,6 +378,7 @@ def convert():
                     pass
 
     except Exception as e:
+        app.logger.error(f"Error during conversion: {e}")
         return jsonify({"error": str(e)}), 500
 
 
