@@ -1,7 +1,9 @@
 
 import io
+import os
 import pandas as pd
 import pdfplumber
+import camelot
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -9,23 +11,49 @@ app = Flask(__name__)
 def extract_data_from_pdf(pdf_bytes: bytes):
     text_content = []
     tables_data = []
+    temp_pdf_path = "temp_input.pdf"
 
-    with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-        for page in pdf.pages:
-            # Extrair texto
-            text_content.append(page.extract_text())
+    # Salva o PDF em um arquivo temporário para o Camelot
+    try:
+        with open(temp_pdf_path, "wb") as f:
+            f.write(pdf_bytes)
 
-            # Extrair tabelas
-            tables = page.extract_tables()
-            for table in tables:
-                tables_data.append(table)
+        # Extração de texto com pdfplumber (para texto nativo)
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                text_content.append(page.extract_text() or "")
+
+        # Extração de tabelas com Camelot
+        # Tenta o flavor 'stream' primeiro, que é bom para tabelas sem bordas
+        try:
+            camelot_tables = camelot.read_pdf(temp_pdf_path, pages="all", flavor="stream")
+            for table in camelot_tables:
+                tables_data.append(table.df.fillna("").values.tolist())
+        except Exception as e:
+            app.logger.warning(f"Camelot stream failed, trying lattice: {e}")
+            # Se 'stream' falhar, tenta 'lattice' para tabelas com bordas
+            try:
+                camelot_tables = camelot.read_pdf(temp_pdf_path, pages="all", flavor="lattice")
+                for table in camelot_tables:
+                    tables_data.append(table.df.fillna("").values.tolist())
+            except Exception as e_lattice:
+                app.logger.error(f"Camelot lattice also failed: {e_lattice}")
+                # Se ambos falharem, retorna tabelas vazias
+                tables_data = []
+
+    except Exception as e:
+        app.logger.error(f"Error processing PDF: {e}")
+        return {"text": "", "tables": []}
+    finally:
+        # Limpa o arquivo temporário
+        if os.path.exists(temp_pdf_path):
+            os.remove(temp_pdf_path)
 
     return {"text": "\n".join(text_content), "tables": tables_data}
 
 @app.route("/extract_pdf", methods=["POST"])
 def extract_pdf():
     try:
-        # A requisição do n8n deve enviar o PDF como binary data no corpo da requisição
         pdf_bytes = request.get_data()
         app.logger.info(f"Received request with Content-Type: {request.content_type}")
         app.logger.info(f"Received PDF data length: {len(pdf_bytes)} bytes")
@@ -37,6 +65,9 @@ def extract_pdf():
         return jsonify(extracted_data)
 
     except Exception as e:
+        app.logger.error(f"Error in extract_pdf endpoint: {e}")
+        import traceback
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/convert_tables_to_csv", methods=["POST"])
@@ -50,16 +81,18 @@ def convert_tables_to_csv():
 
         csv_strings = []
         for i, table in enumerate(tables):
-            # Converter cada tabela para um DataFrame e depois para CSV
             df = pd.DataFrame(table)
             csv_strings.append(df.to_csv(index=False, header=False))
         
         return jsonify({"csv_data": csv_strings})
 
     except Exception as e:
+        app.logger.error(f"Error in convert_tables_to_csv endpoint: {e}")
+        import traceback
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7001)
+    app.run(host="0.0.0.0", port=5000)
 
 
