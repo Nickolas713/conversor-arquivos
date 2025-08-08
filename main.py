@@ -314,6 +314,10 @@ def convert():
             return jsonify({"error": "No file data provided"}), 400
 
         # Determine file extension from content type
+        is_supported, format_type = is_supported_format(content_type)
+        if not is_supported:
+            return jsonify({"error": "Unsupported Media Type"}), 415
+
         extension = mimetypes.guess_extension(content_type) or ""
         if extension == ".jpe":  # quirk do mimetypes para image/jpeg
             extension = ".jpg"
@@ -329,7 +333,9 @@ def convert():
             use_ocr = request.args.get("ocr", "true").lower() == "true"
 
             if format_type == "pdf":
+                app.logger.info("Processing PDF file...")
                 result = pdf_extract_text_and_tables(file_data, use_ocr=use_ocr)
+                app.logger.info(f"PDF processing result: {result}")
                 return jsonify({"format": "pdf", **result})
 
             if format_type == "image":
