@@ -295,24 +295,23 @@ def health():
 
 @app.route("/convert", methods=["POST"])
 def convert():
-    """
-    Converte arquivos sem GPT (100% Python).
-    Query Parameters:
-        ocr (bool): se true, roda OCR em PDF/Imagem quando necessário (default: true)
-    """
     try:
-        file_data = request.get_data()
-        content_type = request.content_type or ""
+        file_data = None
+        content_type = None
+
+        # 1) Se vier como multipart/form-data (ex.: n8n mandando Binary como 'file')
+        if "file" in request.files:
+            f = request.files["file"]
+            file_data = f.read()
+            content_type = f.mimetype or request.content_type
+
+        # 2) Caso contrário, RAW no corpo
+        if file_data is None:
+            file_data = request.get_data()
+            content_type = request.content_type or ""
 
         if not file_data:
             return jsonify({"error": "No file data provided"}), 400
-
-        # Check if the file format is supported
-        is_supported, format_type = is_supported_format(content_type)
-        if not is_supported:
-            return jsonify(
-                {"error": f"Unsupported file type: {content_type}. Provide a supported format."}
-            ), 400
 
         # Determine file extension from content type
         extension = mimetypes.guess_extension(content_type) or ""
