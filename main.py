@@ -296,27 +296,38 @@ def health():
 @app.route("/convert", methods=["POST"])
 def convert():
     try:
+        app.logger.info(f"Received request with content-type: {request.content_type}")
+        app.logger.info(f"Request headers: {dict(request.headers)}")
+        
         file_data = None
         content_type = None
 
         # 1) Se vier como multipart/form-data (ex.: n8n mandando Binary como 'file')
         if "file" in request.files:
+            app.logger.info("Processing multipart/form-data request")
             f = request.files["file"]
             file_data = f.read()
             content_type = f.mimetype or request.content_type
+            app.logger.info(f"File mimetype: {f.mimetype}, Content-Type: {content_type}")
 
         # 2) Caso contrário, RAW no corpo
         if file_data is None:
+            app.logger.info("Processing raw binary request")
             file_data = request.get_data()
             content_type = request.content_type or ""
+            app.logger.info(f"Raw data length: {len(file_data)}, Content-Type: {content_type}")
 
         if not file_data:
+            app.logger.error("No file data provided")
             return jsonify({"error": "No file data provided"}), 400
 
         # Determine file extension from content type
         is_supported, format_type = is_supported_format(content_type)
+        app.logger.info(f"Format check - is_supported: {is_supported}, format_type: {format_type}")
+        
         if not is_supported:
-            return jsonify({"error": "Unsupported Media Type"}), 415
+            app.logger.error(f"Unsupported media type: {content_type}")
+            return jsonify({"error": f"Unsupported Media Type: {content_type}"}), 415
 
         extension = mimetypes.guess_extension(content_type) or ""
         if extension == ".jpe":  # quirk do mimetypes para image/jpeg
@@ -335,7 +346,7 @@ def convert():
             if format_type == "pdf":
                 app.logger.info("Processing PDF file...")
                 result = pdf_extract_text_and_tables(file_data, use_ocr=use_ocr)
-                app.logger.info(f"PDF processing result: {result}")
+                app.logger.info(f"PDF processing completed successfully")
                 return jsonify({"format": "pdf", **result})
 
             if format_type == "image":
@@ -379,6 +390,8 @@ def convert():
 
     except Exception as e:
         app.logger.error(f"Error during conversion: {e}")
+        import traceback
+        app.logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 
